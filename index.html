@@ -7,9 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#eeebe6;--sf:#faf9f7;--card:#fff;--br:#d4cfc6;--brs:#a5a09a;--tx:#1a1916;--mu:#7a7570;--ac:#1d4ed8;--acbg:#eff6ff;--dn:#b91c1c;--ok:#166534;--wn:#92400e;--wnbg:#fef9c3;--r:8px;--sh:0 1px 3px rgba(0,0,0,.08)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -94,7 +92,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
     <button class="tbtn prime" onclick="exportarProvaDocx()">📥 Exportar DOCX</button>
     <button class="tbtn" onclick="abrirModalRubrica()">📊 Rúbrica</button>
     <button class="tbtn" onclick="abrirModalVersoes()">🔄 Versões</button>
-    <button class="tbtn" onclick="salvarFirebase()">💾 Firebase</button>
+    <button class="tbtn" id="cloudSaveBtn" onclick="salvarSupabase()">💾 Salvar Supabase</button>
     <button class="tbtn" onclick="abrirConfiguracao()">⚙️ Config</button>
   </div>
 </div>
@@ -417,33 +415,46 @@ Alinhe com BNCC</textarea>
   </div>
 </div>
 
-<!-- MODAL CONFIGURAÇÃO -->
+<!-- MODAL CONFIGURAÇÃO SUPABASE -->
 <div id="modalConfig" class="modal">
   <div class="modal-box">
     <h2>Configurações do Sistema</h2>
-    
+
     <div class="fl">
-      <label>Chave API Firebase</label>
-      <input type="password" id="configApiKey" placeholder="Cole sua chave de API...">
+      <label>URL do Projeto Supabase</label>
+      <input
+        type="text"
+        id="configUrl"
+        placeholder="https://seuprojeto.supabase.co"
+      >
     </div>
 
     <div class="fl">
-      <label>ID do Projeto Firebase</label>
-      <input type="text" id="configProjectId" placeholder="seu-projeto">
+      <label>Publishable Key</label>
+      <input
+        type="password"
+        id="configAnonKey"
+        placeholder="sb_publishable_..."
+      >
     </div>
 
     <div class="fl">
-      <label>Email para Autenticação</label>
-      <input type="email" id="configEmail" placeholder="seu@email.com">
+      <label>Tabela Principal</label>
+      <input
+        type="text"
+        id="configTabela"
+        value="avaliacoes"
+      >
     </div>
 
     <div class="info-card">
-      ℹ️ Configure Firebase em <a href="https://console.firebase.google.com" target="_blank" style="color:#1e40af;text-decoration:underline">console.firebase.google.com</a>
+      ℹ️ Configure no painel do Supabase:
+      Settings → API Keys
     </div>
 
     <div class="modal-acts">
       <button class="btn btn-secondary" onclick="fecharModalConfig()">Cancelar</button>
-      <button class="btn btn-prime" onclick="salvarConfig()">✓ Salvar Config</button>
+      <button class="btn btn-prime" onclick="salvarConfigSupabase()">✓ Salvar Config</button>
     </div>
   </div>
 </div>
@@ -1083,10 +1094,21 @@ function deletarDaBiblioteca(idx){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CONFIGURAÇÃO E FIREBASE
+// CONFIGURAÇÃO E SUPABASE
 // ═══════════════════════════════════════════════════════════════════════════
 
 function abrirConfiguracao(){
+  const configRaw = localStorage.getItem('supabaseConfig');
+  if(configRaw){
+    try {
+      const config = JSON.parse(configRaw);
+      document.getElementById('configUrl').value = config.supabaseUrl || '';
+      document.getElementById('configAnonKey').value = config.supabaseAnonKey || '';
+      document.getElementById('configTabela').value = config.supabaseTable || 'avaliacoes';
+    } catch (err){
+      console.warn('Configuração Supabase inválida:', err);
+    }
+  }
   document.getElementById('modalConfig').classList.add('open');
 }
 
@@ -1094,39 +1116,81 @@ function fecharModalConfig(){
   document.getElementById('modalConfig').classList.remove('open');
 }
 
-function salvarConfig(){
-  const apiKey = document.getElementById('configApiKey').value;
-  const projectId = document.getElementById('configProjectId').value;
-  const email = document.getElementById('configEmail').value;
+function salvarConfigSupabase(){
+  const supabaseUrl = document.getElementById('configUrl').value.trim();
+  const supabaseAnonKey = document.getElementById('configAnonKey').value.trim();
+  const supabaseTable = document.getElementById('configTabela').value.trim() || 'avaliacoes';
   
-  localStorage.setItem('firebaseConfig', JSON.stringify({apiKey, projectId, email}));
+  localStorage.setItem('supabaseConfig', JSON.stringify({supabaseUrl, supabaseAnonKey, supabaseTable}));
   fecharModalConfig();
   alert('✓ Configuração salva!');
 }
 
-function salvarFirebase(){
-  const config = localStorage.getItem('firebaseConfig');
-  if(!config){
-    alert('Configure Firebase em ⚙️ Config primeiro');
+function criarClienteSupabase(config){
+  return supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+}
+
+async function salvarSupabase(){
+  const configRaw = localStorage.getItem('supabaseConfig');
+  if(!configRaw){
+    alert('Configure Supabase em ⚙️ Config primeiro');
     abrirConfiguracao();
     return;
   }
-  
+
+  let config = null;
+  try {
+    config = JSON.parse(configRaw);
+  } catch (err){
+    alert('Configuração inválida. Salve novamente em ⚙️ Config.');
+    abrirConfiguracao();
+    return;
+  }
+
+  if(!config.supabaseUrl || !config.supabaseAnonKey){
+    alert('Preencha URL e anon key do Supabase em ⚙️ Config.');
+    abrirConfiguracao();
+    return;
+  }
+
+  const tabela = config.supabaseTable || 'avaliacoes';
+  const cliente = criarClienteSupabase(config);
+
+  document.getElementById('syncStatus').innerHTML = '<span class="loading"></span> Sincronizando';
+
   const dados = {
     escola: document.getElementById('nomeEscola').value,
     titulo: document.getElementById('tituloAval').value,
-    questoes: questoes,
-    rubricated: rubricated,
-    biblioteca: biblioteca,
+    disciplina: document.getElementById('disciplina').value,
+    serie: document.getElementById('serie').value,
+    data: document.getElementById('dataProv').value,
+    questoes,
+    rubricated,
+    biblioteca,
     timestamp: new Date().toISOString()
   };
-  
-  localStorage.setItem('avaliacaoData', JSON.stringify(dados));
-  document.getElementById('syncStatus').innerHTML = '🟢 Salvo Localmente';
-  alert('✓ Dados salvos com sucesso!');
-  setTimeout(() => {
-    document.getElementById('syncStatus').innerHTML = '📡 Offline';
-  }, 3000);
+
+  try {
+    const { error } = await cliente
+      .from(tabela)
+      .insert([{ escola: dados.escola, titulo: dados.titulo, payload: dados }]);
+
+    if(error){
+      throw error;
+    }
+
+    localStorage.setItem('avaliacaoData', JSON.stringify(dados));
+    document.getElementById('syncStatus').innerHTML = '🟢 Salvo Supabase';
+    document.getElementById('statusLocal').textContent = 'Supabase';
+    alert('✓ Dados salvos no Supabase com sucesso!');
+    setTimeout(() => {
+      document.getElementById('syncStatus').innerHTML = '📡 Offline';
+    }, 3000);
+  } catch (err){
+    console.error('Erro ao salvar no Supabase:', err);
+    document.getElementById('syncStatus').innerHTML = '🔴 Erro no Supabase';
+    alert(`Não foi possível salvar no Supabase.\n\nDetalhe: ${err.message || err}`);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1205,6 +1269,13 @@ async function exportarProvaDocx(){
 // ═══════════════════════════════════════════════════════════════════════════
 
 window.addEventListener('load', () => {
+  const cloudSaveBtn = document.getElementById('cloudSaveBtn') || document.querySelector('.tbtn[onclick*="salvarFirebase"], .tbtn[onclick*="salvarSupabase"]');
+  if(cloudSaveBtn){
+    cloudSaveBtn.setAttribute('onclick', 'salvarSupabase()');
+    cloudSaveBtn.textContent = '💾 Salvar Supabase';
+    cloudSaveBtn.id = 'cloudSaveBtn';
+  }
+
   atualizarPreviewRubrica();
   atualizarEstatisticas();
   const savedData = localStorage.getItem('avaliacaoData');
