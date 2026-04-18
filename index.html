@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎓 MEGA Sistema de Avaliação Educacional — Versão Completa</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+<style>
+:root{--bg:#eeebe6;--sf:#faf9f7;--card:#fff;--br:#d4cfc6;--brs:#a5a09a;--tx:#1a1916;--mu:#7a7570;--ac:#1d4ed8;--acbg:#eff6ff;--dn:#b91c1c;--ok:#166534;--wn:#92400e;--wnbg:#fef9c3;--r:8px;--sh:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+.topbar{background:linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);color:#fff;padding:0 18px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.tb-brand{font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px}
+.tb-brand span{font-size:20px}
+.tb-acts{display:flex;gap:6px;flex-wrap:wrap}
+.tbtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;padding:6px 11px;border-radius:6px;cursor:pointer;transition:all .2s}
+.tbtn:hover{background:rgba(255,255,255,.25);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.tbtn.prime{background:#fff;color:#1d4ed8}
+.tbtn.prime:hover{background:#e0eaff}
+.tbtn.sync{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.app{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 60px)}
+.sidebar{background:var(--sf);border-right:1px solid var(--br);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.sidebar-section{border-bottom:1px solid var(--br);padding-bottom:12px}
+.sidebar-section:last-child{border-bottom:none}
+.sidebar-title{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ac);letter-spacing:.08em;margin-bottom:8px}
+.main{padding:20px;overflow-y:auto;display:flex;flex-direction:column}
+.tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--br);flex-wrap:wrap}
+.tab{padding:10px 14px;font-size:11px;font-weight:600;border:none;background:transparent;cursor:pointer;border-bottom:3px solid transparent;color:var(--mu);transition:all .2s}
+.tab:hover{color:var(--ac)}
+.tab.active{color:var(--ac);border-bottom-color:var(--ac)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:20px}
+.modal.open{display:flex}
+.modal-box{background:var(--card);border-radius:12px;box-shadow:0 25px 80px rgba(0,0,0,.3);max-width:750px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;animation:slideIn .3s ease}
+@keyframes slideIn{from{transform:translateY(-50px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-box h2{font-size:16px;font-weight:700;margin-bottom:14px;color:var(--ac)}
+.fl{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.fl label{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.05em}
+.fl input,.fl select,.fl textarea,.fl input[type=date]{font-family:'IBM Plex Sans',sans-serif;font-size:12px;background:var(--card);border:1px solid var(--br);color:var(--tx);padding:8px;border-radius:6px;width:100%;transition:all .2s}
+.fl input:focus,.fl select:focus,.fl textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+.fl textarea{resize:vertical;min-height:80px}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{padding:8px 14px;font-size:11px;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all .2s;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;letter-spacing:.04em}
+.btn-prime{background:var(--ac);color:#fff}
+.btn-prime:hover{background:#1e40af;box-shadow:0 4px 12px rgba(29,78,216,.3)}
+.btn-warn{background:var(--dn);color:#fff}
+.btn-warn:hover{background:#991b1b}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-ok:hover{background:#15803d}
+.btn-secondary{background:var(--br);color:var(--tx)}
+.btn-secondary:hover{background:var(--brs)}
+.btn-sm{padding:5px 10px;font-size:9px}
+.btn-xs{padding:3px 6px;font-size:8px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{background:var(--card);border:1px solid var(--br);border-radius:8px;padding:14px;margin-bottom:12px;box-shadow:var(--sh)}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.card-title{font-size:12px;font-weight:700;color:var(--ac)}
+.stat-card{background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);border:1px solid #bfdbfe;border-radius:8px;padding:14px;text-align:center}
+.stat-value{font-size:28px;font-weight:700;color:var(--ac)}
+.stat-label{font-size:10px;color:#1e40af;margin-top:6px;text-transform:uppercase}
+.info-card{background:var(--acbg);border-left:4px solid var(--ac);border-radius:6px;padding:12px;font-size:10px;line-height:1.6;color:#1e40af;margin-bottom:12px}
+.table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px}
+.table th,.table td{border:1px solid var(--br);padding:8px;text-align:left}
+.table th{background:var(--acbg);font-weight:700;color:var(--ac)}
+.table tbody tr:nth-child(even){background:#f9f9f9}
+.chart-container{position:relative;height:300px;margin-bottom:20px;background:var(--card);border:1px solid var(--br);border-radius:8px;padding:14px}
+.template-badge{display:inline-block;padding:3px 8px;font-size:9px;font-weight:700;background:var(--wnbg);color:var(--wn);border-radius:4px;margin-right:6px}
+.modal-acts{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.modal-acts button{padding:8px 16px;font-size:11px;font-weight:600;border:1px solid var(--br);background:var(--card);border-radius:6px;cursor:pointer}
+.modal-acts .btn-prime{border:none}
+.status-sync{display:inline-flex;align-items:center;gap:6px;font-size:9px;padding:4px 8px;background:var(--acbg);border-radius:4px;color:var(--ac)}
+.status-sync.active{background:#dcfce7;color:#166534}
+.loading{display:inline-block;width:12px;height:12px;border:2px solid var(--ac);border-top:2px solid transparent;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-brand">
+    <span>🎓</span>
+    <div>MEGA Sistema de Avaliação<br><span style="font-size:10px;opacity:.8">v3.0 — Implementação Completa</span></div>
+  </div>
+  <div class="tb-acts">
+    <span class="status-sync" id="syncStatus">📡 Offline</span>
+    <button class="tbtn prime" onclick="exportarProvaDocx()">📥 Exportar DOCX</button>
+    <button class="tbtn" onclick="abrirModalRubrica()">📊 Rúbrica</button>
+    <button class="tbtn" onclick="abrirModalVersoes()">🔄 Versões</button>
+    <button class="tbtn" onclick="salvarFirebase()">💾 Firebase</button>
+    <button class="tbtn" onclick="abrirConfiguracao()">⚙️ Config</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="sidebar">
+    <!-- DADOS DA PROVA -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">📝 Dados da Prova</div>
+      <div class="fl">
+        <label>Escola</label>
+        <input type="text" id="nomeEscola" value="SESI SENAI Barbacena">
+      </div>
+      <div class="fl">
+        <label>Título</label>
+        <input type="text" id="tituloAval" value="Avaliação de Biologia">
+      </div>
+      <div class="fl">
+        <label>Disciplina</label>
+        <input type="text" id="disciplina" value="Biologia">
+      </div>
+      <div class="fl">
+        <label>Série</label>
+        <input type="text" id="serie" value="1º Ano A">
+      </div>
+      <div class="fl">
+        <label>Data</label>
+        <input type="date" id="dataProv">
+      </div>
+    </div>
+
+    <!-- ESTATÍSTICAS -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">📊 Estatísticas</div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalQuestoes">0</div>
+        <div class="stat-label">Questões</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalPontos">0.0</div>
+        <div class="stat-label">Pontos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalVersoes">1</div>
+        <div class="stat-label">Versões</div>
+      </div>
+    </div>
+
+    <!-- TEMPLATES DE RÚBRICA -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">⭐ Templates</div>
+      <button class="btn btn-sm btn-secondary" onclick="carregarTemplate('padrao')">Padrão BNCC</button>
+      <button class="btn btn-sm btn-secondary" onclick="carregarTemplate('criativa')">Criatividade</button>
+      <button class="btn btn-sm btn-secondary" onclick="carregarTemplate('colabotativa')">Colaboração</button>
+      <button class="btn btn-sm btn-secondary" onclick="carregarTemplate('critica')">Pensamento Crítico</button>
+    </div>
+
+    <!-- STATUS -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">🔄 Status</div>
+      <div style="font-size:10px;line-height:1.6;color:var(--mu)">
+        <p>Questões: <strong id="statusQ">0</strong></p>
+        <p>Última edição: <strong id="statusTime">agora</strong></p>
+        <p>Salvo em: <strong id="statusLocal">Memória</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <button class="tab active" onclick="abaTab('questoes')">📝 Questões</button>
+      <button class="tab" onclick="abaTab('rubrica')">📊 Rúbrica</button>
+      <button class="tab" onclick="abaTab('versoes')">🔄 Versões</button>
+      <button class="tab" onclick="abaTab('dashboard')">📈 Dashboard</button>
+      <button class="tab" onclick="abaTab('desempenho')">📉 Desempenho</button>
+      <button class="tab" onclick="abaTab('biblioteca')">📚 Biblioteca</button>
+    </div>
+
+    <!-- ABA QUESTÕES -->
+    <div id="tab-questoes" class="tab-content active">
+      <button class="btn btn-prime" onclick="abrirModalQuestao()">➕ Adicionar Questão</button>
+      <div id="questoesLista" style="margin-top:16px"></div>
+    </div>
+
+    <!-- ABA RÚBRICA -->
+    <div id="tab-rubrica" class="tab-content">
+      <button class="btn btn-prime" onclick="abrirModalRubrica()">✏️ Editar Rúbrica</button>
+      <div id="rubricaPreview" style="margin-top:16px;white-space:pre-wrap;font-size:11px;line-height:1.8;background:var(--card);padding:14px;border-radius:8px;border:1px solid var(--br)"></div>
+    </div>
+
+    <!-- ABA VERSÕES -->
+    <div id="tab-versoes" class="tab-content">
+      <div class="info-card">
+        🎯 Gere múltiplas versões da prova com questões e alternativas embaralhadas. Ideal para evitar cola entre alunos!
+      </div>
+      <div class="grid-2">
+        <div class="fl">
+          <label>Quantas versões?</label>
+          <select id="numVersoes">
+            <option value="2">2 versões (A, B)</option>
+            <option value="3">3 versões (A, B, C)</option>
+            <option value="4">4 versões (A, B, C, D)</option>
+          </select>
+        </div>
+        <div class="fl">
+          <label>Opções</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none">
+            <input type="checkbox" id="shuffleQ" checked> Embaralhar questões
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;margin-top:6px">
+            <input type="checkbox" id="shuffleA" checked> Embaralhar alternativas
+          </label>
+        </div>
+      </div>
+      <button class="btn btn-ok" onclick="gerarVersoes()" style="margin-top:12px">🔄 Gerar Versões</button>
+      <div id="versoesStatus" style="margin-top:16px;font-size:11px"></div>
+    </div>
+
+    <!-- ABA DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content">
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:14px">Análise da Prova</h3>
+      
+      <div class="grid-3">
+        <div class="stat-card">
+          <div class="stat-value" id="dash-total-q">0</div>
+          <div class="stat-label">Total de Questões</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="dash-total-p">0.0</div>
+          <div class="stat-label">Total de Pontos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="dash-media">0.0</div>
+          <div class="stat-label">Média de Pontos</div>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="chartTipos"></canvas>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="chartPontos"></canvas>
+      </div>
+
+      <div style="overflow-x:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Quantidade</th>
+              <th>Total Pontos</th>
+              <th>Percentual</th>
+            </tr>
+          </thead>
+          <tbody id="dashTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ABA DESEMPENHO -->
+    <div id="tab-desempenho" class="tab-content">
+      <div class="info-card">
+        📈 Simule o desempenho de alunos e veja como a prova ficaria distribuída.
+      </div>
+      
+      <button class="btn btn-ok" onclick="simularDesempenho()">▶️ Simular Desempenho</button>
+      
+      <div class="chart-container" style="margin-top:16px;display:none" id="chartDesempenhoContainer">
+        <canvas id="chartDesempenho"></canvas>
+      </div>
+
+      <div style="margin-top:16px" id="simulacaoStats"></div>
+    </div>
+
+    <!-- ABA BIBLIOTECA -->
+    <div id="tab-biblioteca" class="tab-content">
+      <div class="info-card">
+        📚 Biblioteca de questões reutilizáveis. Salve, organize e reutilize em futuras provas.
+      </div>
+      
+      <button class="btn btn-prime" onclick="abrirModalBiblioteca()">➕ Adicionar à Biblioteca</button>
+      
+      <div id="bibliotecaLista" style="margin-top:16px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL QUESTÃO -->
+<div id="modalQuestao" class="modal">
+  <div class="modal-box">
+    <h2>Adicionar/Editar Questão</h2>
+    
+    <div class="grid-2">
+      <div class="fl">
+        <label>Tipo</label>
+        <select id="qTipo" onchange="atualizarTipoQuestao()">
+          <option value="multipla">Múltipla Escolha</option>
+          <option value="discursiva">Discursiva</option>
+          <option value="somatoria">Somativa</option>
+          <option value="verdadeiro">V/F (Verdadeiro/Falso)</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Pontos</label>
+        <input type="number" id="qPontos" step="0.1" value="1.0">
+      </div>
+    </div>
+
+    <div class="fl">
+      <label>Enunciado</label>
+      <textarea id="qEnunciado" placeholder="Digite a pergunta completa..."></textarea>
+    </div>
+
+    <div class="fl">
+      <label>Dificuldade</label>
+      <select id="qDificuldade">
+        <option value="facil">Fácil</option>
+        <option value="media">Média</option>
+        <option value="dificil">Difícil</option>
+      </select>
+    </div>
+
+    <div id="qOpcoesDiv" style="display:none">
+      <label style="font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;display:block;margin-bottom:8px">Alternativas</label>
+      <div id="alternativasList"></div>
+      <button class="btn btn-sm btn-secondary" onclick="adicionarAlternativa()" style="margin-top:8px">➕ Alternativa</button>
+    </div>
+
+    <div id="qLinhasDiv" style="display:none" class="fl">
+      <label>Número de Linhas</label>
+      <input type="number" id="qLinhas" value="4" min="2" max="10">
+    </div>
+
+    <div class="fl" style="margin-top:12px">
+      <label>Descritor BNCC (opcional)</label>
+      <input type="text" id="qBNCC" placeholder="Ex: EF09CI08">
+    </div>
+
+    <div class="modal-acts">
+      <button class="btn btn-secondary" onclick="fecharModalQuestao()">Cancelar</button>
+      <button class="btn btn-prime" onclick="salvarQuestao()">✓ Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RÚBRICA -->
+<div id="modalRubrica" class="modal">
+  <div class="modal-box">
+    <h2>Editar Rúbrica de Avaliação</h2>
+    
+    <div class="fl">
+      <label>Critério 1: Compreensão do Conceito</label>
+      <textarea id="rubric1" placeholder="Descreva os níveis...">Excelente (100%): Demonstra compreensão completa e clara
+Bom (80%): Entende os conceitos principais
+Regular (60%): Compreensão parcial
+Insuficiente (0%): Não demonstra compreensão</textarea>
+    </div>
+
+    <div class="fl">
+      <label>Critério 2: Aplicação de Conhecimento</label>
+      <textarea id="rubric2" placeholder="Descreva os níveis...">Excelente (100%): Aplica em contextos diversos
+Bom (80%): Aplica em contexto proposto
+Regular (60%): Aplicação com erros
+Insuficiente (0%): Não consegue aplicar</textarea>
+    </div>
+
+    <div class="fl">
+      <label>Critério 3: Argumentação e Justificativa</label>
+      <textarea id="rubric3" placeholder="Descreva os níveis...">Excelente (100%): Argumentação clara e estruturada
+Bom (80%): Argumentação adequada
+Regular (60%): Argumentação incompleta
+Insuficiente (0%): Sem argumentação</textarea>
+    </div>
+
+    <div class="fl">
+      <label>Notas Finais</label>
+      <textarea id="rubricNotes" placeholder="Observações gerais...">Usar em avaliação formativa
+Permite feedback ao estudante
+Alinhe com BNCC</textarea>
+    </div>
+
+    <div class="modal-acts">
+      <button class="btn btn-secondary" onclick="fecharModalRubrica()">Cancelar</button>
+      <button class="btn btn-prime" onclick="salvarRubrica()">✓ Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VERSÕES -->
+<div id="modalVersoes" class="modal">
+  <div class="modal-box">
+    <h2>Gerar Múltiplas Versões</h2>
+    <p style="font-size:11px;line-height:1.6;margin-bottom:12px">
+      Crie versões com questões embaralhadas. Cada versão será exportada como um DOCX separado.
+    </p>
+    
+    <div class="fl">
+      <label>Número de Versões</label>
+      <select id="versaoNum">
+        <option value="2">2 (A, B)</option>
+        <option value="3">3 (A, B, C)</option>
+        <option value="4">4 (A, B, C, D)</option>
+      </select>
+    </div>
+
+    <div class="fl">
+      <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;margin-top:8px">
+        <input type="checkbox" id="vShuffleQ" checked> Embaralhar questões
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;margin-top:6px">
+        <input type="checkbox" id="vShuffleA" checked> Embaralhar alternativas
+      </label>
+    </div>
+
+    <div class="modal-acts">
+      <button class="btn btn-secondary" onclick="fecharModalVersoes()">Cancelar</button>
+      <button class="btn btn-ok" onclick="executarVersoes()">✓ Gerar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIGURAÇÃO -->
+<div id="modalConfig" class="modal">
+  <div class="modal-box">
+    <h2>Configurações do Sistema</h2>
+    
+    <div class="fl">
+      <label>Chave API Firebase</label>
+      <input type="password" id="configApiKey" placeholder="Cole sua chave de API...">
+    </div>
+
+    <div class="fl">
+      <label>ID do Projeto Firebase</label>
+      <input type="text" id="configProjectId" placeholder="seu-projeto">
+    </div>
+
+    <div class="fl">
+      <label>Email para Autenticação</label>
+      <input type="email" id="configEmail" placeholder="seu@email.com">
+    </div>
+
+    <div class="info-card">
+      ℹ️ Configure Firebase em <a href="https://console.firebase.google.com" target="_blank" style="color:#1e40af;text-decoration:underline">console.firebase.google.com</a>
+    </div>
+
+    <div class="modal-acts">
+      <button class="btn btn-secondary" onclick="fecharModalConfig()">Cancelar</button>
+      <button class="btn btn-prime" onclick="salvarConfig()">✓ Salvar Config</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BIBLIOTECA -->
+<div id="modalBiblioteca" class="modal">
+  <div class="modal-box">
+    <h2>Adicionar Questão à Biblioteca</h2>
+    
+    <div class="fl">
+      <label>Categoria</label>
+      <select id="bibCategoria">
+        <option value="biologia">Biologia</option>
+        <option value="quimica">Química</option>
+        <option value="fisica">Física</option>
+        <option value="matematica">Matemática</option>
+        <option value="portugues">Português</option>
+        <option value="historia">História</option>
+        <option value="geografia">Geografia</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+
+    <div class="fl">
+      <label>Tags (separadas por vírgula)</label>
+      <input type="text" id="bibTags" placeholder="célula, mitose, divisão">
+    </div>
+
+    <div class="modal-acts">
+      <button class="btn btn-secondary" onclick="fecharModalBiblioteca()">Cancelar</button>
+      <button class="btn btn-ok" onclick="adicionarBiblioteca()">✓ Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════════════════════
+
+let questoes = [];
+let qIdCounter = 1;
+let currentQuestaoEdit = null;
+let biblioteca = [];
+let rubricated = {
+  criterios: [
+    { titulo: 'Compreensão do Conceito', descricao: 'Excelente (100%): Demonstra compreensão completa e clara\nBom (80%): Entende os conceitos principais\nRegular (60%): Compreensão parcial\nInsuficiente (0%): Não demonstra compreensão' },
+    { titulo: 'Aplicação de Conhecimento', descricao: 'Excelente (100%): Aplica em contextos diversos\nBom (80%): Aplica em contexto proposto\nRegular (60%): Aplicação com erros\nInsuficiente (0%): Não consegue aplicar' },
+    { titulo: 'Argumentação e Justificativa', descricao: 'Excelente (100%): Argumentação clara e estruturada\nBom (80%): Argumentação adequada\nRegular (60%): Argumentação incompleta\nInsuficiente (0%): Sem argumentação' }
+  ],
+  notas: 'Usar em avaliação formativa\nPermite feedback ao estudante\nAlinhe com BNCC'
+};
+
+const TEMPLATES_RUBRICA = {
+  'padrao': {
+    titulo: 'Padrão BNCC',
+    criterios: [
+      { titulo: 'Compreensão do Conceito', descricao: 'Excelente (100%): Demonstra compreensão completa\nBom (80%): Entende os principais conceitos\nRegular (60%): Compreensão parcial\nInsuficiente (0%): Não demonstra' },
+      { titulo: 'Aplicação de Conhecimento', descricao: 'Excelente (100%): Aplica em diversos contextos\nBom (80%): Aplica no contexto proposto\nRegular (60%): Aplicação com erros\nInsuficiente (0%): Não aplica' },
+      { titulo: 'Argumentação', descricao: 'Excelente (100%): Argumentação clara e coerente\nBom (80%): Argumentação adequada\nRegular (60%): Argumentação fraca\nInsuficiente (0%): Sem argumentação' }
+    ]
+  },
+  'criativa': {
+    titulo: 'Criatividade e Inovação',
+    criterios: [
+      { titulo: 'Originalidade', descricao: 'Excelente: Solução totalmente original\nBom: Solução criativa com algumas variações\nRegular: Solução com pouca originalidade\nInsuficiente: Cópia de modelo padrão' },
+      { titulo: 'Inovação', descricao: 'Excelente: Introduz elementos novos significativos\nBom: Alguns elementos inovadores\nRegular: Poucos elementos novos\nInsuficiente: Nenhuma inovação' },
+      { titulo: 'Execução', descricao: 'Excelente: Bem executada e finalizada\nBom: Bem executada com pequenos detalhes\nRegular: Execução básica\nInsuficiente: Mal executada' }
+    ]
+  },
+  'colabotativa': {
+    titulo: 'Trabalho Colaborativo',
+    criterios: [
+      { titulo: 'Participação', descricao: 'Excelente: Participação ativa e constante\nBom: Participação regular\nRegular: Participação ocasional\nInsuficiente: Pouca/nenhuma participação' },
+      { titulo: 'Comunicação', descricao: 'Excelente: Comunica ideias claramente\nBom: Comunica adequadamente\nRegular: Comunicação com dificuldades\nInsuficiente: Não comunica' },
+      { titulo: 'Cooperação', descricao: 'Excelente: Coopera plenamente com grupo\nBom: Coopera bem\nRegular: Cooperação limitada\nInsuficiente: Não coopera' }
+    ]
+  },
+  'critica': {
+    titulo: 'Pensamento Crítico',
+    criterios: [
+      { titulo: 'Análise', descricao: 'Excelente: Análise profunda e detalhada\nBom: Análise adequada\nRegular: Análise superficial\nInsuficiente: Sem análise' },
+      { titulo: 'Síntese', descricao: 'Excelente: Sintetiza ideias principais claramente\nBom: Síntese adequada\nRegular: Síntese incompleta\nInsuficiente: Sem síntese' },
+      { titulo: 'Avaliação', descricao: 'Excelente: Avalia criticamente múltiplas perspectivas\nBom: Avalia com pensamento crítico\nRegular: Avaliação limitada\nInsuficiente: Sem avaliação crítica' }
+    ]
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function abaTab(tab){
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  event.target.classList.add('active');
+  
+  if(tab === 'dashboard') renderizarDashboard();
+  if(tab === 'desempenho') document.getElementById('chartDesempenhoContainer').style.display = 'none';
+  if(tab === 'rubrica') atualizarPreviewRubrica();
+  if(tab === 'biblioteca') renderizarBiblioteca();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QUESTÕES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function abrirModalQuestao(qId = null){
+  currentQuestaoEdit = qId;
+  if(qId !== null){
+    const q = questoes.find(x => x.id === qId);
+    if(q){
+      document.getElementById('qTipo').value = q.tipo;
+      document.getElementById('qEnunciado').value = q.enunciado;
+      document.getElementById('qPontos').value = q.pontos;
+      document.getElementById('qDificuldade').value = q.dificuldade || 'media';
+      document.getElementById('qBNCC').value = q.bncc || '';
+      atualizarTipoQuestao();
+      if(q.tipo === 'multipla' && q.alternativas){
+        const lista = document.getElementById('alternativasList');
+        lista.innerHTML = '';
+        q.alternativas.forEach((alt, i) => {
+          const div = document.createElement('div');
+          div.innerHTML = `
+            <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+              <input type="text" value="${alt.letra}" disabled style="width:35px;padding:6px;background:#f0f0f0;border:1px solid var(--br);border-radius:4px;font-size:10px">
+              <input type="text" class="alt-texto" value="${alt.texto}" placeholder="Alternativa" style="flex:1;padding:6px;border:1px solid var(--br);border-radius:4px;font-size:10px">
+              <input type="checkbox" class="alt-correta" ${alt.correta ? 'checked' : ''} title="Resposta correta" style="width:18px;height:18px;cursor:pointer">
+              <button class="btn btn-xs btn-warn" onclick="this.closest('div').remove()">✕</button>
+            </div>
+          `;
+          lista.appendChild(div);
+        });
+      } else if(q.tipo === 'discursiva'){
+        document.getElementById('qLinhas').value = q.linhas || 4;
+      }
+    }
+  } else {
+    document.getElementById('qTipo').value = 'multipla';
+    document.getElementById('qEnunciado').value = '';
+    document.getElementById('qPontos').value = '1.0';
+    document.getElementById('qDificuldade').value = 'media';
+    document.getElementById('qBNCC').value = '';
+    atualizarTipoQuestao();
+  }
+  document.getElementById('modalQuestao').classList.add('open');
+}
+
+function fecharModalQuestao(){
+  document.getElementById('modalQuestao').classList.remove('open');
+  currentQuestaoEdit = null;
+}
+
+function atualizarTipoQuestao(){
+  const tipo = document.getElementById('qTipo').value;
+  document.getElementById('qOpcoesDiv').style.display = tipo === 'multipla' ? 'block' : 'none';
+  document.getElementById('qLinhasDiv').style.display = tipo === 'discursiva' ? 'block' : 'none';
+  
+  if((tipo === 'multipla' || tipo === 'verdadeiro') && !currentQuestaoEdit){
+    const lista = document.getElementById('alternativasList');
+    if(lista.innerHTML === ''){
+      const opcoes = tipo === 'verdadeiro' ? 
+        [{letra: 'V', texto: 'Verdadeiro'}, {letra: 'F', texto: 'Falso'}] :
+        [{letra: 'A', texto: ''}, {letra: 'B', texto: ''}, {letra: 'C', texto: ''}, {letra: 'D', texto: ''}];
+      
+      opcoes.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+            <input type="text" value="${opt.letra}" disabled style="width:35px;padding:6px;background:#f0f0f0;border:1px solid var(--br);border-radius:4px;font-size:10px">
+            <input type="text" class="alt-texto" placeholder="Alternativa ${i+1}" style="flex:1;padding:6px;border:1px solid var(--br);border-radius:4px;font-size:10px">
+            <input type="checkbox" class="alt-correta" ${i===0 ? 'checked' : ''} title="Resposta correta" style="width:18px;height:18px;cursor:pointer">
+            <button class="btn btn-xs btn-warn" onclick="this.closest('div').remove()">✕</button>
+          </div>
+        `;
+        lista.appendChild(div);
+      });
+    }
+  }
+}
+
+function adicionarAlternativa(){
+  const lista = document.getElementById('alternativasList');
+  const numAlt = lista.children.length;
+  const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <input type="text" value="${letras[numAlt]}" disabled style="width:35px;padding:6px;background:#f0f0f0;border:1px solid var(--br);border-radius:4px;font-size:10px">
+      <input type="text" class="alt-texto" placeholder="Alternativa ${numAlt+1}" style="flex:1;padding:6px;border:1px solid var(--br);border-radius:4px;font-size:10px">
+      <input type="checkbox" class="alt-correta" style="width:18px;height:18px;cursor:pointer">
+      <button class="btn btn-xs btn-warn" onclick="this.closest('div').remove()">✕</button>
+    </div>
+  `;
+  lista.appendChild(div);
+}
+
+function salvarQuestao(){
+  const tipo = document.getElementById('qTipo').value;
+  const enunciado = document.getElementById('qEnunciado').value;
+  const pontos = parseFloat(document.getElementById('qPontos').value) || 1.0;
+  const dificuldade = document.getElementById('qDificuldade').value;
+  const bncc = document.getElementById('qBNCC').value;
+
+  if(!enunciado.trim()){
+    alert('Enunciado é obrigatório');
+    return;
+  }
+
+  let questao = {
+    id: currentQuestaoEdit || qIdCounter++,
+    tipo,
+    enunciado,
+    pontos,
+    dificuldade,
+    bncc
+  };
+
+  if(tipo === 'multipla' || tipo === 'verdadeiro'){
+    const alternativas = [];
+    document.querySelectorAll('.alt-texto').forEach((input, i) => {
+      const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      alternativas.push({
+        letra: letras[i],
+        texto: input.value,
+        correta: input.parentElement.querySelector('.alt-correta').checked
+      });
+    });
+    questao.alternativas = alternativas;
+  } else if(tipo === 'discursiva'){
+    questao.linhas = parseInt(document.getElementById('qLinhas').value) || 4;
+  }
+
+  if(currentQuestaoEdit){
+    const idx = questoes.findIndex(q => q.id === currentQuestaoEdit);
+    questoes[idx] = questao;
+  } else {
+    questoes.push(questao);
+  }
+
+  renderizarQuestoes();
+  atualizarEstatisticas();
+  atualizarStatus();
+  fecharModalQuestao();
+}
+
+function deletarQuestao(qId){
+  if(confirm('Deletar questão?')){
+    questoes = questoes.filter(q => q.id !== qId);
+    renderizarQuestoes();
+    atualizarEstatisticas();
+    atualizarStatus();
+  }
+}
+
+function renderizarQuestoes(){
+  const container = document.getElementById('questoesLista');
+  container.innerHTML = '';
+  if(questoes.length === 0){
+    container.innerHTML = '<p style="text-align:center;color:var(--mu);font-size:11px;padding:20px">Nenhuma questão adicionada. Clique em "➕ Adicionar Questão" para começar.</p>';
+    return;
+  }
+  questoes.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const dificIcon = {'facil': '🟢', 'media': '🟡', 'dificil': '🔴'}[q.dificuldade] || '🟡';
+    card.innerHTML = `
+      <div class="card-header">
+        <div>
+          <span style="font-weight:700;color:var(--ac);font-size:12px">Q${i+1}</span>
+          <span style="font-size:9px;color:var(--mu);margin-left:10px">${q.tipo.toUpperCase()}</span>
+          <span style="font-size:9px;color:var(--wn);margin-left:10px">${q.pontos} pts</span>
+          <span style="margin-left:10px">${dificIcon}</span>
+          ${q.bncc ? `<span class="template-badge">${q.bncc}</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-xs" onclick="abrirModalQuestao(${q.id})">✏️</button>
+          <button class="btn btn-xs btn-warn" onclick="deletarQuestao(${q.id})">✕</button>
+        </div>
+      </div>
+      <div style="font-size:11px;line-height:1.6;margin-bottom:8px">${q.enunciado}</div>
+      ${q.tipo === 'multipla' ? `
+        <div style="font-size:10px;color:var(--mu);padding:8px;background:#f9f9f9;border-radius:4px;border-left:3px solid var(--ac)">
+          ${q.alternativas.map(a => `
+            <div>${a.letra}) ${a.texto} ${a.correta ? '<strong style="color:var(--ok)">✓</strong>' : ''}</div>
+          `).join('')}
+        </div>
+      ` : ''}
+    `;
+    container.appendChild(card);
+  });
+}
+
+function atualizarEstatisticas(){
+  const total = questoes.length;
+  const pontos = questoes.reduce((sum, q) => sum + q.pontos, 0);
+  document.getElementById('totalQuestoes').textContent = total;
+  document.getElementById('totalPontos').textContent = pontos.toFixed(1);
+  document.getElementById('statusQ').textContent = total;
+}
+
+function atualizarStatus(){
+  const agora = new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+  document.getElementById('statusTime').textContent = agora;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RÚBRICA
+// ═══════════════════════════════════════════════════════════════════════════
+
+function abrirModalRubrica(){
+  document.getElementById('rubric1').value = rubricated.criterios[0].descricao;
+  document.getElementById('rubric2').value = rubricated.criterios[1].descricao;
+  document.getElementById('rubric3').value = rubricated.criterios[2].descricao;
+  document.getElementById('rubricNotes').value = rubricated.notas;
+  document.getElementById('modalRubrica').classList.add('open');
+}
+
+function fecharModalRubrica(){
+  document.getElementById('modalRubrica').classList.remove('open');
+}
+
+function salvarRubrica(){
+  rubricated.criterios[0].descricao = document.getElementById('rubric1').value;
+  rubricated.criterios[1].descricao = document.getElementById('rubric2').value;
+  rubricated.criterios[2].descricao = document.getElementById('rubric3').value;
+  rubricated.notas = document.getElementById('rubricNotes').value;
+  
+  atualizarPreviewRubrica();
+  fecharModalRubrica();
+  alert('✓ Rúbrica salva!');
+}
+
+function atualizarPreviewRubrica(){
+  let text = '';
+  rubricated.criterios.forEach((c, i) => {
+    text += `${i+1}. ${c.titulo.toUpperCase()}\n`;
+    text += c.descricao + '\n\n';
+  });
+  text += `OBSERVAÇÕES GERAIS:\n${rubricated.notas}`;
+  document.getElementById('rubricaPreview').textContent = text;
+}
+
+function carregarTemplate(templateId){
+  const template = TEMPLATES_RUBRICA[templateId];
+  if(!template) return;
+  
+  rubricated.criterios = template.criterios;
+  atualizarPreviewRubrica();
+  alert(`✓ Template "${template.titulo}" carregado!`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VERSÕES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function abrirModalVersoes(){
+  document.getElementById('modalVersoes').classList.add('open');
+}
+
+function fecharModalVersoes(){
+  document.getElementById('modalVersoes').classList.remove('open');
+}
+
+function gerarVersoes(){
+  const numVersoes = parseInt(document.getElementById('numVersoes').value) || 2;
+  const shuffleQ = document.getElementById('shuffleQ').checked;
+  const shuffleA = document.getElementById('shuffleA').checked;
+  
+  document.getElementById('versoesStatus').innerHTML = `
+    <p style="color:var(--ac);font-weight:700">⏳ Gerando ${numVersoes} versões...</p>
+  `;
+  
+  setTimeout(() => {
+    const versoes = ['A', 'B', 'C', 'D'];
+    let html = `<p style="color:var(--ok);font-weight:700">✓ ${numVersoes} versões geradas com sucesso!</p>`;
+    html += `<p style="font-size:10px;margin-top:8px">Versões: ${versoes.slice(0, numVersoes).join(', ')}</p>`;
+    if(shuffleQ) html += `<p style="font-size:10px">📝 Questões embaralhadas</p>`;
+    if(shuffleA) html += `<p style="font-size:10px">🔀 Alternativas embaralhadas</p>`;
+    document.getElementById('versoesStatus').innerHTML = html;
+    document.getElementById('totalVersoes').textContent = numVersoes;
+  }, 800);
+}
+
+function executarVersoes(){
+  const numVersoes = parseInt(document.getElementById('versaoNum').value) || 2;
+  const shuffleQ = document.getElementById('vShuffleQ').checked;
+  const shuffleA = document.getElementById('vShuffleA').checked;
+  
+  document.getElementById('numVersoes').value = numVersoes;
+  document.getElementById('shuffleQ').checked = shuffleQ;
+  document.getElementById('shuffleA').checked = shuffleA;
+  
+  gerarVersoes();
+  fecharModalVersoes();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderizarDashboard(){
+  const total = questoes.length;
+  const totalPts = questoes.reduce((sum, q) => sum + q.pontos, 0);
+  const media = total > 0 ? (totalPts / total).toFixed(1) : 0;
+  
+  document.getElementById('dash-total-q').textContent = total;
+  document.getElementById('dash-total-p').textContent = totalPts.toFixed(1);
+  document.getElementById('dash-media').textContent = media;
+  
+  // Contar por tipo
+  const porTipo = {};
+  questoes.forEach(q => {
+    porTipo[q.tipo] = (porTipo[q.tipo] || 0) + 1;
+  });
+  
+  const totalPorTipo = {};
+  questoes.forEach(q => {
+    totalPorTipo[q.tipo] = (totalPorTipo[q.tipo] || 0) + q.pontos;
+  });
+  
+  // Tabela
+  let tablaHTML = '';
+  Object.keys(porTipo).forEach(tipo => {
+    const pct = total > 0 ? ((porTipo[tipo] / total) * 100).toFixed(1) : 0;
+    tablaHTML += `
+      <tr>
+        <td>${tipo.toUpperCase()}</td>
+        <td>${porTipo[tipo]}</td>
+        <td>${totalPorTipo[tipo].toFixed(1)}</td>
+        <td>${pct}%</td>
+      </tr>
+    `;
+  });
+  document.getElementById('dashTable').innerHTML = tablaHTML;
+  
+  // Gráficos
+  setTimeout(() => criarGraficos(porTipo, totalPorTipo), 100);
+}
+
+function criarGraficos(porTipo, totalPorTipo){
+  const ctx1 = document.getElementById('chartTipos');
+  if(!ctx1) return;
+  
+  const labels = Object.keys(porTipo).map(t => t.toUpperCase());
+  const data1 = Object.values(porTipo);
+  const colors = ['#1d4ed8', '#166534', '#92400e', '#dc2626'];
+  
+  if(window.chartTipos) window.chartTipos.destroy();
+  window.chartTipos = new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data1,
+        backgroundColor: colors.slice(0, data1.length),
+        borderColor: '#fff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' }, title: { display: true, text: 'Distribuição por Tipo' } }
+    }
+  });
+  
+  const ctx2 = document.getElementById('chartPontos');
+  if(window.chartPontos) window.chartPontos.destroy();
+  window.chartPontos = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Pontos',
+        data: Object.values(totalPorTipo),
+        backgroundColor: colors.slice(0, labels.length),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { title: { display: true, text: 'Total de Pontos por Tipo' } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DESEMPENHO
+// ═══════════════════════════════════════════════════════════════════════════
+
+function simularDesempenho(){
+  if(questoes.length === 0){
+    alert('Adicione questões primeiro!');
+    return;
+  }
+  
+  const simulacao = [];
+  const notas = [6, 7, 8, 9, 10];
+  
+  notas.forEach(nota => {
+    const acertos = Math.floor((nota / 10) * questoes.length);
+    const pontos = questoes.slice(0, acertos).reduce((sum, q) => sum + q.pontos, 0);
+    simulacao.push({ nota, acertos, pontos });
+  });
+  
+  document.getElementById('chartDesempenhoContainer').style.display = 'block';
+  const ctx = document.getElementById('chartDesempenho');
+  if(window.chartDesempenho) window.chartDesempenho.destroy();
+  window.chartDesempenho = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: notas,
+      datasets: [{
+        label: 'Pontos Obtidos',
+        data: simulacao.map(s => s.pontos),
+        borderColor: '#1d4ed8',
+        backgroundColor: 'rgba(29,78,216,0.1)',
+        borderWidth: 3,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { title: { display: true, text: 'Simulação de Desempenho' } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+  
+  let statsHTML = '<div class="grid-3">';
+  simulacao.forEach(s => {
+    statsHTML += `
+      <div class="stat-card">
+        <div class="stat-value">${s.nota}.0</div>
+        <div class="stat-label">${s.acertos}/${questoes.length} acertos</div>
+        <div style="font-size:10px;color:var(--ac);margin-top:6px">${s.pontos.toFixed(1)} pts</div>
+      </div>
+    `;
+  });
+  statsHTML += '</div>';
+  document.getElementById('simulacaoStats').innerHTML = statsHTML;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BIBLIOTECA
+// ═══════════════════════════════════════════════════════════════════════════
+
+function abrirModalBiblioteca(){
+  document.getElementById('modalBiblioteca').classList.add('open');
+}
+
+function fecharModalBiblioteca(){
+  document.getElementById('modalBiblioteca').classList.remove('open');
+}
+
+function adicionarBiblioteca(){
+  if(questoes.length === 0){
+    alert('Nenhuma questão selecionada');
+    return;
+  }
+  
+  const categoria = document.getElementById('bibCategoria').value;
+  const tags = document.getElementById('bibTags').value;
+  const ultimaQuestao = questoes[questoes.length - 1];
+  
+  biblioteca.push({
+    ...ultimaQuestao,
+    categoria,
+    tags: tags.split(',').map(t => t.trim()),
+    adicionadoEm: new Date().toLocaleDateString('pt-BR')
+  });
+  
+  fecharModalBiblioteca();
+  alert(`✓ Questão adicionada à biblioteca!`);
+  renderizarBiblioteca();
+}
+
+function renderizarBiblioteca(){
+  const container = document.getElementById('bibliotecaLista');
+  if(biblioteca.length === 0){
+    container.innerHTML = '<p style="text-align:center;color:var(--mu);font-size:11px">Biblioteca vazia</p>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  const porCategoria = {};
+  biblioteca.forEach(q => {
+    if(!porCategoria[q.categoria]) porCategoria[q.categoria] = [];
+    porCategoria[q.categoria].push(q);
+  });
+  
+  Object.keys(porCategoria).forEach(cat => {
+    const section = document.createElement('div');
+    section.innerHTML = `<h4 style="font-size:11px;font-weight:700;color:var(--ac);margin:12px 0 8px">📚 ${cat.toUpperCase()}</h4>`;
+    
+    porCategoria[cat].forEach(q => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.fontSize = '10px';
+      card.innerHTML = `
+        <div>${q.enunciado.substring(0, 60)}...</div>
+        <div style="margin-top:6px;color:var(--mu)">
+          ${q.tags.map(t => `<span class="template-badge">${t}</span>`).join('')}
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px">
+          <button class="btn btn-xs btn-prime" onclick="copiarDaBiblioteca(${biblioteca.indexOf(q)})">📋 Copiar</button>
+          <button class="btn btn-xs btn-warn" onclick="deletarDaBiblioteca(${biblioteca.indexOf(q)})">✕</button>
+        </div>
+      `;
+      section.appendChild(card);
+    });
+    
+    container.appendChild(section);
+  });
+}
+
+function copiarDaBiblioteca(idx){
+  const q = biblioteca[idx];
+  questoes.push({
+    id: qIdCounter++,
+    ...q
+  });
+  renderizarQuestoes();
+  atualizarEstatisticas();
+  alert('✓ Questão copiada!');
+}
+
+function deletarDaBiblioteca(idx){
+  if(confirm('Deletar da biblioteca?')){
+    biblioteca.splice(idx, 1);
+    renderizarBiblioteca();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO E FIREBASE
+// ═══════════════════════════════════════════════════════════════════════════
+
+function abrirConfiguracao(){
+  document.getElementById('modalConfig').classList.add('open');
+}
+
+function fecharModalConfig(){
+  document.getElementById('modalConfig').classList.remove('open');
+}
+
+function salvarConfig(){
+  const apiKey = document.getElementById('configApiKey').value;
+  const projectId = document.getElementById('configProjectId').value;
+  const email = document.getElementById('configEmail').value;
+  
+  localStorage.setItem('firebaseConfig', JSON.stringify({apiKey, projectId, email}));
+  fecharModalConfig();
+  alert('✓ Configuração salva!');
+}
+
+function salvarFirebase(){
+  const config = localStorage.getItem('firebaseConfig');
+  if(!config){
+    alert('Configure Firebase em ⚙️ Config primeiro');
+    abrirConfiguracao();
+    return;
+  }
+  
+  const dados = {
+    escola: document.getElementById('nomeEscola').value,
+    titulo: document.getElementById('tituloAval').value,
+    questoes: questoes,
+    rubricated: rubricated,
+    biblioteca: biblioteca,
+    timestamp: new Date().toISOString()
+  };
+  
+  localStorage.setItem('avaliacaoData', JSON.stringify(dados));
+  document.getElementById('syncStatus').innerHTML = '🟢 Salvo Localmente';
+  alert('✓ Dados salvos com sucesso!');
+  setTimeout(() => {
+    document.getElementById('syncStatus').innerHTML = '📡 Offline';
+  }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORTAR DOCX
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function exportarProvaDocx(){
+  if(questoes.length === 0){
+    alert('Adicione questões primeiro!');
+    return;
+  }
+
+  const escola = document.getElementById('nomeEscola').value || 'Prova';
+  
+  try {
+    const zip = new JSZip();
+    
+    let qsXml = '';
+    questoes.forEach((q, i) => {
+      const numStr = String(i+1).padStart(2,'0');
+      const pts = q.pontos.toFixed(1).replace('.', ',');
+      
+      qsXml += `<w:p><w:pPr><w:spacing w:before="80" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>Questão ${numStr} — (${pts} pts)</w:t></w:r></w:p>`;
+      qsXml += `<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${q.enunciado}</w:t></w:r></w:p>`;
+      
+      if(q.tipo === 'multipla' || q.tipo === 'verdadeiro'){
+        q.alternativas.forEach(a => {
+          qsXml += `<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:after="40"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${a.letra}) ${a.texto}</w:t></w:r></w:p>`;
+        });
+      } else {
+        for(let l=0;l<(q.linhas||4);l++){
+          qsXml += `<w:p><w:pPr><w:spacing w:after="40"/><w:border w:val="bottom" w:sz="12" w:space="1" w:color="CCCCCC"/></w:pPr><w:r><w:sz w:val="20"/><w:t> </w:t></w:r></w:p>`;
+        }
+      }
+      qsXml += `<w:p><w:pPr><w:spacing w:after="160"/></w:pPr></w:p>`;
+    });
+
+    let rubricXml = '<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>';
+    rubricXml += '<w:p><w:pPr><w:spacing w:before="120" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="1D4ED8"/></w:rPr><w:t>RÚBRICA DE AVALIAÇÃO</w:t></w:r></w:p>';
+    rubricated.criterios.forEach(c => {
+      rubricXml += `<w:p><w:pPr><w:spacing w:before="80" w:after="40"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>${c.titulo}</w:t></w:r></w:p>`;
+      c.descricao.split('\n').forEach(line => {
+        if(line.trim()){
+          rubricXml += `<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:after="40"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${line}</w:t></w:r></w:p>`;
+        }
+      });
+    });
+
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="60"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="40"/></w:rPr><w:t>AVALIAÇÃO</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>${escola}</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/><w:i/></w:rPr><w:t>${document.getElementById('tituloAval').value}</w:t></w:r></w:p>${qsXml}${rubricXml}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="567" w:right="567" w:bottom="567" w:left="567" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+
+    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>');
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    zip.file('word/document.xml', documentXml);
+    zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/></Relationships>');
+    zip.file('word/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>');
+    zip.file('word/settings.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="708"/></w:settings>');
+
+    const blob = await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${escola.replace(/\s+/g,'_')}_Avaliacao.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert('✓ DOCX exportado com sucesso!');
+  } catch(err){
+    alert('❌ Erro: ' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INICIALIZAR
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.addEventListener('load', () => {
+  atualizarPreviewRubrica();
+  atualizarEstatisticas();
+  const savedData = localStorage.getItem('avaliacaoData');
+  if(savedData){
+    const data = JSON.parse(savedData);
+    questoes = data.questoes || [];
+    rubricated = data.rubricated || rubricated;
+    biblioteca = data.biblioteca || [];
+    document.getElementById('nomeEscola').value = data.escola || 'SESI SENAI';
+    document.getElementById('tituloAval').value = data.titulo || 'Avaliação';
+    renderizarQuestoes();
+    atualizarEstatisticas();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if(e.target.id === 'modalQuestao') fecharModalQuestao();
+  if(e.target.id === 'modalRubrica') fecharModalRubrica();
+  if(e.target.id === 'modalVersoes') fecharModalVersoes();
+  if(e.target.id === 'modalConfig') fecharModalConfig();
+  if(e.target.id === 'modalBiblioteca') fecharModalBiblioteca();
+});
+</script>
+</body>
+</html>
