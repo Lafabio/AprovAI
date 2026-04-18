@@ -5,16 +5,18 @@
 A **versão final e ultra-completa** que integra TODAS as funcionalidades solicitadas:
 
 ✅ **CRUD Completo de Questões** — Adicionar, editar, deletar, organizar  
-✅ **Firebase Integration** — Preparado para sincronização em nuvem  
+✅ **Supabase Integration** — Preparado para sincronização em nuvem
 ✅ **Embaralhamento Avançado** — Questões e alternativas embaralhadas  
 ✅ **Múltiplas Versões** — Gere A, B, C, D automaticamente  
+✅ **Lista de Alunos** — Cadastre turma e distribuição automática
+✅ **Arranjo Anti-cola** — Exportação em lote por aluno com versão alternada
 ✅ **Dashboard Completo** — Gráficos interativos com Chart.js  
 ✅ **Análise de Desempenho** — Simulação e previsão de notas  
 ✅ **Biblioteca de Questões** — Reutilize questões em futuras provas  
 ✅ **Templates de Rúbrica** — BNCC, Criatividade, Colaboração, Pensamento Crítico  
 ✅ **Editor de Rúbrica** — Customização completa e salva automaticamente  
 ✅ **Exportação DOCX** — Prova + rúbrica formatados profissionalmente  
-✅ **Interface Moderna** — 6 abas, sidebar com estatísticas, modais intuitivos  
+✅ **Interface Moderna** — 7 abas, sidebar com estatísticas, modais intuitivos
 ✅ **Persistência Local** — Salva em localStorage automaticamente  
 ✅ **Sincronização Status** — Indica quando dados foram salvos  
 
@@ -27,7 +29,7 @@ A **versão final e ultra-completa** que integra TODAS as funcionalidades solici
 - **Tamanho**: 57 KB
 - **Dependências**: JSZip + Chart.js (ambas via CDN)
 - **Compatibilidade**: Chrome 60+, Firefox 55+, Safari 12+, Edge 79+
-- **Modo**: Offline-first com Firebase ready
+- **Modo**: Offline-first com Supabase ready
 
 ---
 
@@ -267,7 +269,7 @@ Clique para carregar imediatamente na rúbrica
 Mostra:
 ├─ Questões: [quantidade]
 ├─ Última edição: [horário]
-└─ Salvo em: [Local/Firebase]
+└─ Salvo em: [Local/Supabase]
 ```
 
 ---
@@ -279,26 +281,26 @@ Mostra:
 ├─ 📥 Exportar DOCX (download imediato)
 ├─ 📊 Rúbrica (abre modal)
 ├─ 🔄 Versões (abre modal)
-├─ 💾 Firebase (salva em nuvem/localStorage)
-└─ ⚙️ Configuração (Firebase settings)
+├─ 💾 Supabase (salva em nuvem/localStorage)
+└─ ⚙️ Configuração (Supabase settings)
 ```
 
 ---
 
-## 🔧 Configurações (Firebase)
+## 🔧 Configurações (Supabase)
 
 **Como configurar:**
 
 ```
 1. Clique "⚙️ Config" (topbar)
 2. Modal abre com 3 campos:
-   • Chave API Firebase
-   • ID do Projeto Firebase
-   • Email para Autenticação
+   • URL do Projeto Supabase
+   • Chave Anon do Supabase
+   • Nome da Tabela
 3. Obtenha credenciais em:
-   https://console.firebase.google.com
+   https://supabase.com/dashboard
 4. Clique "✓ Salvar Config"
-5. Firebase ativado!
+5. Supabase ativado!
 ```
 
 **O que faz:**
@@ -326,7 +328,7 @@ localStorage → Salva localmente no navegador
 Cria snapshot com:
 ├─ Todos os dados
 ├─ Timestamp ISO
-└─ Pronto para Firebase
+└─ Pronto para Supabase
 
 Status atualiza para "🟢 Salvo"
 Após 3 segundos volta a "📡 Offline"
@@ -484,12 +486,12 @@ TEMPLATES_RUBRICA['meu-template'] = {
 
 | Problema | Solução |
 |----------|---------|
-| Dados desaparecem ao recarregar | Configure Firebase em ⚙️ Config |
+| Dados desaparecem ao recarregar | Configure Supabase em ⚙️ Config |
 | DOCX não baixa | Verifique bloqueador de pop-ups |
 | Gráficos não aparecem | Recarregue página (F5) |
 | Rúbrica não salva | Clique "✓ Salvar" na modal |
 | Questão não aparece | Recarregue a lista (F5) |
-| Firebase não conecta | Verifique credenciais em ⚙️ Config |
+| Supabase não conecta | Verifique credenciais em ⚙️ Config |
 
 ---
 
@@ -509,7 +511,7 @@ TEMPLATES_RUBRICA['meu-template'] = {
 - Android (em navegador)
 
 ✅ **Modo:**
-- Online com Firebase
+- Online com Supabase
 - Offline com localStorage
 - Híbrido (sincroniza quando conectado)
 
@@ -527,7 +529,7 @@ Biblioteca:
 • Questões: até 500+
 • Armazenamento: até 50MB (localStorage)
 
-Firebase:
+Supabase:
 • Ilimitado (plano free: 1GB)
 ```
 
@@ -538,7 +540,7 @@ Firebase:
 ```
 Dados Salvos Em:
 ✓ localStorage (navegador local)
-✓ Firebase (nuvem, com autenticação)
+✓ Supabase (nuvem, com autenticação)
 ✓ DOCX exportado (seu computador)
 
 Não salvamos:
@@ -590,7 +592,7 @@ Não salvamos:
 
 5. **Backup Regular**
    - Use "💾 Salvar" frequentemente
-   - Configure Firebase
+   - Configure Supabase
    - Exporte DOCX final
 
 ---
@@ -601,7 +603,7 @@ Para dúvidas ou bugs:
 1. Abra console (F12)
 2. Verifique mensagens de erro
 3. Tente recarregar (Ctrl+F5)
-4. Configure Firebase se necessário
+4. Configure Supabase se necessário
 5. Verifique localStorage
 
 ---

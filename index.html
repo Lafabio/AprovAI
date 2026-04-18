@@ -7,9 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#eeebe6;--sf:#faf9f7;--card:#fff;--br:#d4cfc6;--brs:#a5a09a;--tx:#1a1916;--mu:#7a7570;--ac:#1d4ed8;--acbg:#eff6ff;--dn:#b91c1c;--ok:#166534;--wn:#92400e;--wnbg:#fef9c3;--r:8px;--sh:0 1px 3px rgba(0,0,0,.08)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -92,9 +90,10 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
   <div class="tb-acts">
     <span class="status-sync" id="syncStatus">📡 Offline</span>
     <button class="tbtn prime" onclick="exportarProvaDocx()">📥 Exportar DOCX</button>
+    <button class="tbtn" onclick="exportarLoteAntiCola()">📦 Exportar Anti-cola</button>
     <button class="tbtn" onclick="abrirModalRubrica()">📊 Rúbrica</button>
     <button class="tbtn" onclick="abrirModalVersoes()">🔄 Versões</button>
-    <button class="tbtn" onclick="salvarFirebase()">💾 Firebase</button>
+    <button class="tbtn" id="cloudSaveBtn" onclick="salvarSupabase()">💾 Salvar Supabase</button>
     <button class="tbtn" onclick="abrirConfiguracao()">⚙️ Config</button>
   </div>
 </div>
@@ -161,11 +160,23 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
         <p>Salvo em: <strong id="statusLocal">Memória</strong></p>
       </div>
     </div>
+
+    <!-- LISTA DE ALUNOS -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">👥 Lista de Alunos</div>
+      <div class="fl">
+        <label>Nomes (um por linha)</label>
+        <textarea id="listaAlunosInput" placeholder="Ana Silva&#10;Bruno Costa&#10;Carla Souza" style="min-height:90px"></textarea>
+      </div>
+      <button class="btn btn-sm btn-ok" onclick="salvarListaAlunos()">✓ Salvar Lista</button>
+      <p id="alunosResumo" style="font-size:10px;color:var(--mu);margin-top:8px">0 alunos cadastrados</p>
+    </div>
   </div>
 
   <div class="main">
     <div class="tabs">
       <button class="tab active" onclick="abaTab('questoes')">📝 Questões</button>
+      <button class="tab" onclick="abaTab('alunos')">👥 Alunos</button>
       <button class="tab" onclick="abaTab('rubrica')">📊 Rúbrica</button>
       <button class="tab" onclick="abaTab('versoes')">🔄 Versões</button>
       <button class="tab" onclick="abaTab('dashboard')">📈 Dashboard</button>
@@ -177,6 +188,15 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
     <div id="tab-questoes" class="tab-content active">
       <button class="btn btn-prime" onclick="abrirModalQuestao()">➕ Adicionar Questão</button>
       <div id="questoesLista" style="margin-top:16px"></div>
+    </div>
+
+    <div id="tab-alunos" class="tab-content">
+      <div class="info-card">
+        Cadastre sua turma e gere arquivos DOCX individualizados com arranjo anti-cola (versões A/B/C/D distribuídas automaticamente).
+      </div>
+      <button class="btn btn-ok" onclick="salvarListaAlunos()">✓ Atualizar Lista</button>
+      <button class="btn btn-prime" onclick="exportarLoteAntiCola()" style="margin-left:8px">📦 Exportar Lote Anti-cola</button>
+      <div id="alunosTabelaContainer" style="margin-top:16px"></div>
     </div>
 
     <!-- ABA RÚBRICA -->
@@ -287,7 +307,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
 <div id="modalQuestao" class="modal">
   <div class="modal-box">
     <h2>Adicionar/Editar Questão</h2>
-    
+
     <div class="grid-2">
       <div class="fl">
         <label>Tipo</label>
@@ -345,7 +365,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
 <div id="modalRubrica" class="modal">
   <div class="modal-box">
     <h2>Editar Rúbrica de Avaliação</h2>
-    
+
     <div class="fl">
       <label>Critério 1: Compreensão do Conceito</label>
       <textarea id="rubric1" placeholder="Descreva os níveis...">Excelente (100%): Demonstra compreensão completa e clara
@@ -417,33 +437,46 @@ Alinhe com BNCC</textarea>
   </div>
 </div>
 
-<!-- MODAL CONFIGURAÇÃO -->
+<!-- MODAL CONFIGURAÇÃO SUPABASE -->
 <div id="modalConfig" class="modal">
   <div class="modal-box">
     <h2>Configurações do Sistema</h2>
-    
+
     <div class="fl">
-      <label>Chave API Firebase</label>
-      <input type="password" id="configApiKey" placeholder="Cole sua chave de API...">
+      <label>URL do Projeto Supabase</label>
+      <input
+        type="text"
+        id="configUrl"
+        placeholder="https://seuprojeto.supabase.co"
+      >
     </div>
 
     <div class="fl">
-      <label>ID do Projeto Firebase</label>
-      <input type="text" id="configProjectId" placeholder="seu-projeto">
+      <label>Publishable Key</label>
+      <input
+        type="password"
+        id="configAnonKey"
+        placeholder="sb_publishable_..."
+      >
     </div>
 
     <div class="fl">
-      <label>Email para Autenticação</label>
-      <input type="email" id="configEmail" placeholder="seu@email.com">
+      <label>Tabela Principal</label>
+      <input
+        type="text"
+        id="configTabela"
+        value="avaliacoes"
+      >
     </div>
 
     <div class="info-card">
-      ℹ️ Configure Firebase em <a href="https://console.firebase.google.com" target="_blank" style="color:#1e40af;text-decoration:underline">console.firebase.google.com</a>
+      ℹ️ Configure no painel do Supabase:
+      Settings → API Keys
     </div>
 
     <div class="modal-acts">
       <button class="btn btn-secondary" onclick="fecharModalConfig()">Cancelar</button>
-      <button class="btn btn-prime" onclick="salvarConfig()">✓ Salvar Config</button>
+      <button class="btn btn-prime" onclick="salvarConfigSupabase()">✓ Salvar Config</button>
     </div>
   </div>
 </div>
@@ -488,6 +521,7 @@ let questoes = [];
 let qIdCounter = 1;
 let currentQuestaoEdit = null;
 let biblioteca = [];
+let alunos = [];
 let rubricated = {
   criterios: [
     { titulo: 'Compreensão do Conceito', descricao: 'Excelente (100%): Demonstra compreensão completa e clara\nBom (80%): Entende os conceitos principais\nRegular (60%): Compreensão parcial\nInsuficiente (0%): Não demonstra compreensão' },
@@ -842,6 +876,97 @@ function executarVersoes(){
   fecharModalVersoes();
 }
 
+function parseListaAlunos(texto){
+  return texto
+    .split('\n')
+    .map(n => n.trim())
+    .filter(Boolean);
+}
+
+function salvarListaAlunos(){
+  const texto = document.getElementById('listaAlunosInput').value || '';
+  alunos = parseListaAlunos(texto);
+  document.getElementById('alunosResumo').textContent = `${alunos.length} alunos cadastrados`;
+  renderizarTabelaAlunos();
+  alert('✓ Lista de alunos salva!');
+}
+
+function renderizarTabelaAlunos(){
+  const container = document.getElementById('alunosTabelaContainer');
+  if(!container) return;
+  if(alunos.length === 0){
+    container.innerHTML = '<p style="font-size:11px;color:var(--mu)">Nenhum aluno cadastrado.</p>';
+    return;
+  }
+
+  const numVersoes = parseInt(document.getElementById('numVersoes').value) || 2;
+  const letras = ['A', 'B', 'C', 'D'].slice(0, numVersoes);
+
+  let html = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Aluno</th>
+          <th>Versão anti-cola</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  alunos.forEach((nome, idx) => {
+    const versao = letras[idx % letras.length];
+    html += `<tr><td>${idx + 1}</td><td>${nome}</td><td>${versao}</td></tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function distribuirVersaoAluno(indiceAluno){
+  const numVersoes = parseInt(document.getElementById('numVersoes').value) || 2;
+  const letras = ['A', 'B', 'C', 'D'].slice(0, numVersoes);
+  return letras[indiceAluno % letras.length];
+}
+
+function embaralharComSeed(array, seedBase){
+  const arr = [...array];
+  let seed = seedBase;
+  for(let i = arr.length - 1; i > 0; i--){
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    const j = seed % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function gerarQuestoesPorVersao(letraVersao){
+  const shuffleQ = document.getElementById('shuffleQ').checked;
+  const shuffleA = document.getElementById('shuffleA').checked;
+  const seed = letraVersao.charCodeAt(0) * 97;
+
+  let baseQuestoes = questoes.map(q => ({
+    ...q,
+    alternativas: q.alternativas ? q.alternativas.map(a => ({...a})) : []
+  }));
+
+  if(shuffleQ){
+    baseQuestoes = embaralharComSeed(baseQuestoes, seed + 7);
+  }
+
+  if(shuffleA){
+    baseQuestoes = baseQuestoes.map((q, qIndex) => {
+      if(!q.alternativas || q.alternativas.length === 0) return q;
+      return {
+        ...q,
+        alternativas: embaralharComSeed(q.alternativas, seed + qIndex + 31)
+      };
+    });
+  }
+
+  return baseQuestoes;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1083,10 +1208,21 @@ function deletarDaBiblioteca(idx){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CONFIGURAÇÃO E FIREBASE
+// CONFIGURAÇÃO E SUPABASE
 // ═══════════════════════════════════════════════════════════════════════════
 
 function abrirConfiguracao(){
+  const configRaw = localStorage.getItem('supabaseConfig');
+  if(configRaw){
+    try {
+      const config = JSON.parse(configRaw);
+      document.getElementById('configUrl').value = config.supabaseUrl || '';
+      document.getElementById('configAnonKey').value = config.supabaseAnonKey || '';
+      document.getElementById('configTabela').value = config.supabaseTable || 'avaliacoes';
+    } catch (err){
+      console.warn('Configuração Supabase inválida:', err);
+    }
+  }
   document.getElementById('modalConfig').classList.add('open');
 }
 
@@ -1094,39 +1230,82 @@ function fecharModalConfig(){
   document.getElementById('modalConfig').classList.remove('open');
 }
 
-function salvarConfig(){
-  const apiKey = document.getElementById('configApiKey').value;
-  const projectId = document.getElementById('configProjectId').value;
-  const email = document.getElementById('configEmail').value;
+function salvarConfigSupabase(){
+  const supabaseUrl = document.getElementById('configUrl').value.trim();
+  const supabaseAnonKey = document.getElementById('configAnonKey').value.trim();
+  const supabaseTable = document.getElementById('configTabela').value.trim() || 'avaliacoes';
   
-  localStorage.setItem('firebaseConfig', JSON.stringify({apiKey, projectId, email}));
+  localStorage.setItem('supabaseConfig', JSON.stringify({supabaseUrl, supabaseAnonKey, supabaseTable}));
   fecharModalConfig();
   alert('✓ Configuração salva!');
 }
 
-function salvarFirebase(){
-  const config = localStorage.getItem('firebaseConfig');
-  if(!config){
-    alert('Configure Firebase em ⚙️ Config primeiro');
+function criarClienteSupabase(config){
+  return supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+}
+
+async function salvarSupabase(){
+  const configRaw = localStorage.getItem('supabaseConfig');
+  if(!configRaw){
+    alert('Configure Supabase em ⚙️ Config primeiro');
     abrirConfiguracao();
     return;
   }
-  
+
+  let config = null;
+  try {
+    config = JSON.parse(configRaw);
+  } catch (err){
+    alert('Configuração inválida. Salve novamente em ⚙️ Config.');
+    abrirConfiguracao();
+    return;
+  }
+
+  if(!config.supabaseUrl || !config.supabaseAnonKey){
+    alert('Preencha URL e anon key do Supabase em ⚙️ Config.');
+    abrirConfiguracao();
+    return;
+  }
+
+  const tabela = config.supabaseTable || 'avaliacoes';
+  const cliente = criarClienteSupabase(config);
+
+  document.getElementById('syncStatus').innerHTML = '<span class="loading"></span> Sincronizando';
+
   const dados = {
     escola: document.getElementById('nomeEscola').value,
     titulo: document.getElementById('tituloAval').value,
-    questoes: questoes,
-    rubricated: rubricated,
-    biblioteca: biblioteca,
+    disciplina: document.getElementById('disciplina').value,
+    serie: document.getElementById('serie').value,
+    data: document.getElementById('dataProv').value,
+    questoes,
+    rubricated,
+    biblioteca,
+    alunos,
     timestamp: new Date().toISOString()
   };
-  
-  localStorage.setItem('avaliacaoData', JSON.stringify(dados));
-  document.getElementById('syncStatus').innerHTML = '🟢 Salvo Localmente';
-  alert('✓ Dados salvos com sucesso!');
-  setTimeout(() => {
-    document.getElementById('syncStatus').innerHTML = '📡 Offline';
-  }, 3000);
+
+  try {
+    const { error } = await cliente
+      .from(tabela)
+      .insert([{ escola: dados.escola, titulo: dados.titulo, payload: dados }]);
+
+    if(error){
+      throw error;
+    }
+
+    localStorage.setItem('avaliacaoData', JSON.stringify(dados));
+    document.getElementById('syncStatus').innerHTML = '🟢 Salvo Supabase';
+    document.getElementById('statusLocal').textContent = 'Supabase';
+    alert('✓ Dados salvos no Supabase com sucesso!');
+    setTimeout(() => {
+      document.getElementById('syncStatus').innerHTML = '📡 Offline';
+    }, 3000);
+  } catch (err){
+    console.error('Erro ao salvar no Supabase:', err);
+    document.getElementById('syncStatus').innerHTML = '🔴 Erro no Supabase';
+    alert(`Não foi possível salvar no Supabase.\n\nDetalhe: ${err.message || err}`);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1139,52 +1318,13 @@ async function exportarProvaDocx(){
     return;
   }
 
-  const escola = document.getElementById('nomeEscola').value || 'Prova';
-  
   try {
-    const zip = new JSZip();
-    
-    let qsXml = '';
-    questoes.forEach((q, i) => {
-      const numStr = String(i+1).padStart(2,'0');
-      const pts = q.pontos.toFixed(1).replace('.', ',');
-      
-      qsXml += `<w:p><w:pPr><w:spacing w:before="80" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>Questão ${numStr} — (${pts} pts)</w:t></w:r></w:p>`;
-      qsXml += `<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${q.enunciado}</w:t></w:r></w:p>`;
-      
-      if(q.tipo === 'multipla' || q.tipo === 'verdadeiro'){
-        q.alternativas.forEach(a => {
-          qsXml += `<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:after="40"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${a.letra}) ${a.texto}</w:t></w:r></w:p>`;
-        });
-      } else {
-        for(let l=0;l<(q.linhas||4);l++){
-          qsXml += `<w:p><w:pPr><w:spacing w:after="40"/><w:border w:val="bottom" w:sz="12" w:space="1" w:color="CCCCCC"/></w:pPr><w:r><w:sz w:val="20"/><w:t> </w:t></w:r></w:p>`;
-        }
-      }
-      qsXml += `<w:p><w:pPr><w:spacing w:after="160"/></w:pPr></w:p>`;
+    const blob = await gerarDocxBlob({
+      questoesDoc: questoes,
+      nomeAluno: '',
+      versao: ''
     });
-
-    let rubricXml = '<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>';
-    rubricXml += '<w:p><w:pPr><w:spacing w:before="120" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="1D4ED8"/></w:rPr><w:t>RÚBRICA DE AVALIAÇÃO</w:t></w:r></w:p>';
-    rubricated.criterios.forEach(c => {
-      rubricXml += `<w:p><w:pPr><w:spacing w:before="80" w:after="40"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>${c.titulo}</w:t></w:r></w:p>`;
-      c.descricao.split('\n').forEach(line => {
-        if(line.trim()){
-          rubricXml += `<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:after="40"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${line}</w:t></w:r></w:p>`;
-        }
-      });
-    });
-
-    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="60"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="40"/></w:rPr><w:t>AVALIAÇÃO</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>${escola}</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/><w:i/></w:rPr><w:t>${document.getElementById('tituloAval').value}</w:t></w:r></w:p>${qsXml}${rubricXml}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="567" w:right="567" w:bottom="567" w:left="567" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>`;
-
-    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>');
-    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-    zip.file('word/document.xml', documentXml);
-    zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/></Relationships>');
-    zip.file('word/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>');
-    zip.file('word/settings.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="708"/></w:settings>');
-
-    const blob = await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE'});
+    const escola = document.getElementById('nomeEscola').value || 'Prova';
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1200,11 +1340,110 @@ async function exportarProvaDocx(){
   }
 }
 
+async function gerarDocxBlob({questoesDoc, nomeAluno, versao}){
+  const escola = document.getElementById('nomeEscola').value || 'Prova';
+  const titulo = document.getElementById('tituloAval').value;
+  const disciplina = document.getElementById('disciplina').value;
+  const serie = document.getElementById('serie').value;
+  const data = document.getElementById('dataProv').value;
+
+  const zip = new JSZip();
+
+  let qsXml = '';
+  questoesDoc.forEach((q, i) => {
+    const numStr = String(i+1).padStart(2,'0');
+    const pts = q.pontos.toFixed(1).replace('.', ',');
+
+    qsXml += `<w:p><w:pPr><w:spacing w:before="80" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>Questão ${numStr} — (${pts} pts)</w:t></w:r></w:p>`;
+    qsXml += `<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${q.enunciado}</w:t></w:r></w:p>`;
+
+    if(q.tipo === 'multipla' || q.tipo === 'verdadeiro'){
+      q.alternativas.forEach(a => {
+        qsXml += `<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:after="40"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${a.letra}) ${a.texto}</w:t></w:r></w:p>`;
+      });
+    } else {
+      for(let l=0;l<(q.linhas||4);l++){
+        qsXml += `<w:p><w:pPr><w:spacing w:after="40"/><w:border w:val="bottom" w:sz="12" w:space="1" w:color="CCCCCC"/></w:pPr><w:r><w:sz w:val="20"/><w:t> </w:t></w:r></w:p>`;
+      }
+    }
+    qsXml += `<w:p><w:pPr><w:spacing w:after="160"/></w:pPr></w:p>`;
+  });
+
+  let rubricXml = '<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>';
+  rubricXml += '<w:p><w:pPr><w:spacing w:before="120" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="1D4ED8"/></w:rPr><w:t>RÚBRICA DE AVALIAÇÃO</w:t></w:r></w:p>';
+  rubricated.criterios.forEach(c => {
+    rubricXml += `<w:p><w:pPr><w:spacing w:before="80" w:after="40"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>${c.titulo}</w:t></w:r></w:p>`;
+    c.descricao.split('\n').forEach(line => {
+      if(line.trim()){
+        rubricXml += `<w:p><w:pPr><w:ind w:left="360"/><w:spacing w:after="40"/></w:pPr><w:r><w:sz w:val="22"/><w:t>${line}</w:t></w:r></w:p>`;
+      }
+    });
+  });
+
+  const cabecalhoAluno = nomeAluno ? `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:t>Aluno(a): ${nomeAluno}</w:t></w:r></w:p>` : '';
+  const cabecalhoVersao = versao ? `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="1D4ED8"/></w:rPr><w:t>Versão ${versao}</w:t></w:r></w:p>` : '';
+  const cabecalhoMeta = `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:sz w:val="21"/></w:rPr><w:t>${disciplina} • ${serie} • ${data || 'Data não definida'}</w:t></w:r></w:p>`;
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="60"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="40"/></w:rPr><w:t>AVALIAÇÃO</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>${escola}</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/><w:i/></w:rPr><w:t>${titulo}</w:t></w:r></w:p>${cabecalhoMeta}${cabecalhoAluno}${cabecalhoVersao}${qsXml}${rubricXml}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="567" w:right="567" w:bottom="567" w:left="567" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+
+  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>');
+  zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+  zip.file('word/document.xml', documentXml);
+  zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/></Relationships>');
+  zip.file('word/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>');
+  zip.file('word/settings.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="708"/></w:settings>');
+
+  return zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE'});
+}
+
+async function exportarLoteAntiCola(){
+  if(questoes.length === 0){
+    alert('Adicione questões antes de exportar!');
+    return;
+  }
+  if(alunos.length === 0){
+    alert('Cadastre a lista de alunos para gerar o lote anti-cola.');
+    abaTab('alunos');
+    return;
+  }
+
+  const zipLote = new JSZip();
+  const nomeBase = (document.getElementById('tituloAval').value || 'avaliacao').replace(/\s+/g, '_');
+
+  for(let i = 0; i < alunos.length; i++){
+    const aluno = alunos[i];
+    const versao = distribuirVersaoAluno(i);
+    const questoesDoc = gerarQuestoesPorVersao(versao);
+    const blob = await gerarDocxBlob({ questoesDoc, nomeAluno: aluno, versao });
+    const buffer = await blob.arrayBuffer();
+    const nomeArquivo = `${String(i + 1).padStart(2, '0')}_${aluno.replace(/[^\wÀ-ÿ-]+/g,'_')}_V${versao}.docx`;
+    zipLote.file(nomeArquivo, buffer);
+  }
+
+  const loteBlob = await zipLote.generateAsync({type:'blob', compression:'DEFLATE'});
+  const url = URL.createObjectURL(loteBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nomeBase}_anti_cola.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  alert(`✓ Lote anti-cola exportado para ${alunos.length} alunos!`);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // INICIALIZAR
 // ═══════════════════════════════════════════════════════════════════════════
 
 window.addEventListener('load', () => {
+  const cloudSaveBtn = document.getElementById('cloudSaveBtn') || document.querySelector('.tbtn[onclick*="salvarFirebase"], .tbtn[onclick*="salvarSupabase"]');
+  if(cloudSaveBtn){
+    cloudSaveBtn.setAttribute('onclick', 'salvarSupabase()');
+    cloudSaveBtn.textContent = '💾 Salvar Supabase';
+    cloudSaveBtn.id = 'cloudSaveBtn';
+  }
+
   atualizarPreviewRubrica();
   atualizarEstatisticas();
   const savedData = localStorage.getItem('avaliacaoData');
@@ -1213,10 +1452,17 @@ window.addEventListener('load', () => {
     questoes = data.questoes || [];
     rubricated = data.rubricated || rubricated;
     biblioteca = data.biblioteca || [];
+    alunos = data.alunos || [];
     document.getElementById('nomeEscola').value = data.escola || 'SESI SENAI';
     document.getElementById('tituloAval').value = data.titulo || 'Avaliação';
+    document.getElementById('listaAlunosInput').value = alunos.join('\n');
+    document.getElementById('alunosResumo').textContent = `${alunos.length} alunos cadastrados`;
     renderizarQuestoes();
+    renderizarTabelaAlunos();
     atualizarEstatisticas();
+  }
+  if(!savedData){
+    renderizarTabelaAlunos();
   }
 });
 
