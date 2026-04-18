@@ -92,7 +92,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
     <button class="tbtn prime" onclick="exportarProvaDocx()">📥 Exportar DOCX</button>
     <button class="tbtn" onclick="abrirModalRubrica()">📊 Rúbrica</button>
     <button class="tbtn" onclick="abrirModalVersoes()">🔄 Versões</button>
-    <button class="tbtn" onclick="salvarSupabase()">💾 Salvar Supabase</button>
+    <button class="tbtn" id="cloudSaveBtn" onclick="salvarSupabase()">💾 Salvar Supabase</button>
     <button class="tbtn" onclick="abrirConfiguracao()">⚙️ Config</button>
   </div>
 </div>
@@ -1269,6 +1269,13 @@ async function exportarProvaDocx(){
 // ═══════════════════════════════════════════════════════════════════════════
 
 window.addEventListener('load', () => {
+  const cloudSaveBtn = document.getElementById('cloudSaveBtn') || document.querySelector('.tbtn[onclick*="salvarFirebase"], .tbtn[onclick*="salvarSupabase"]');
+  if(cloudSaveBtn){
+    cloudSaveBtn.setAttribute('onclick', 'salvarSupabase()');
+    cloudSaveBtn.textContent = '💾 Salvar Supabase';
+    cloudSaveBtn.id = 'cloudSaveBtn';
+  }
+
   atualizarPreviewRubrica();
   atualizarEstatisticas();
   const savedData = localStorage.getItem('avaliacaoData');
