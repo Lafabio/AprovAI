@@ -415,42 +415,46 @@ Alinhe com BNCC</textarea>
   </div>
 </div>
 
-<!-- MODAL CONFIGURAÇÃO -->
+<!-- MODAL CONFIGURAÇÃO SUPABASE -->
 <div id="modalConfig" class="modal">
   <div class="modal-box">
     <h2>Configurações do Sistema</h2>
-    
+
     <div class="fl">
       <label>URL do Projeto Supabase</label>
-      <input type="text" id="configSupabaseUrl" placeholder="https://xxxx.supabase.co">
+      <input
+        type="text"
+        id="configUrl"
+        placeholder="https://seuprojeto.supabase.co"
+      >
     </div>
 
     <div class="fl">
-      <label>Chave Anon do Supabase</label>
-      <input type="password" id="configSupabaseAnonKey" placeholder="Cole a sua anon key...">
+      <label>Publishable Key</label>
+      <input
+        type="password"
+        id="configAnonKey"
+        placeholder="sb_publishable_..."
+      >
     </div>
 
     <div class="fl">
-      <label>Tabela para salvar</label>
-      <input type="text" id="configSupabaseTable" placeholder="avaliacoes">
+      <label>Tabela Principal</label>
+      <input
+        type="text"
+        id="configTabela"
+        value="avaliacoes"
+      >
     </div>
 
     <div class="info-card">
-      ℹ️ Configure Supabase em <a href="https://supabase.com/dashboard" target="_blank" style="color:#1e40af;text-decoration:underline">supabase.com/dashboard</a><br>
-      <span style="font-family:monospace;font-size:10px;display:block;margin-top:8px">
-        SQL sugerido: create table if not exists avaliacoes (<br>
-        &nbsp;&nbsp;id bigserial primary key,<br>
-        &nbsp;&nbsp;escola text,<br>
-        &nbsp;&nbsp;titulo text,<br>
-        &nbsp;&nbsp;payload jsonb not null,<br>
-        &nbsp;&nbsp;created_at timestamptz default now()<br>
-        );
-      </span>
+      ℹ️ Configure no painel do Supabase:
+      Settings → API Keys
     </div>
 
     <div class="modal-acts">
       <button class="btn btn-secondary" onclick="fecharModalConfig()">Cancelar</button>
-      <button class="btn btn-prime" onclick="salvarConfig()">✓ Salvar Config</button>
+      <button class="btn btn-prime" onclick="salvarConfigSupabase()">✓ Salvar Config</button>
     </div>
   </div>
 </div>
@@ -1098,9 +1102,9 @@ function abrirConfiguracao(){
   if(configRaw){
     try {
       const config = JSON.parse(configRaw);
-      document.getElementById('configSupabaseUrl').value = config.supabaseUrl || '';
-      document.getElementById('configSupabaseAnonKey').value = config.supabaseAnonKey || '';
-      document.getElementById('configSupabaseTable').value = config.supabaseTable || 'avaliacoes';
+      document.getElementById('configUrl').value = config.supabaseUrl || '';
+      document.getElementById('configAnonKey').value = config.supabaseAnonKey || '';
+      document.getElementById('configTabela').value = config.supabaseTable || 'avaliacoes';
     } catch (err){
       console.warn('Configuração Supabase inválida:', err);
     }
@@ -1112,10 +1116,10 @@ function fecharModalConfig(){
   document.getElementById('modalConfig').classList.remove('open');
 }
 
-function salvarConfig(){
-  const supabaseUrl = document.getElementById('configSupabaseUrl').value.trim();
-  const supabaseAnonKey = document.getElementById('configSupabaseAnonKey').value.trim();
-  const supabaseTable = document.getElementById('configSupabaseTable').value.trim() || 'avaliacoes';
+function salvarConfigSupabase(){
+  const supabaseUrl = document.getElementById('configUrl').value.trim();
+  const supabaseAnonKey = document.getElementById('configAnonKey').value.trim();
+  const supabaseTable = document.getElementById('configTabela').value.trim() || 'avaliacoes';
   
   localStorage.setItem('supabaseConfig', JSON.stringify({supabaseUrl, supabaseAnonKey, supabaseTable}));
   fecharModalConfig();
